@@ -46,7 +46,9 @@ export const Profile: React.FC<ProfileProps> = ({
   // Calculate Portfolio Value
   const portfolioValue = Object.entries(user.portfolio).reduce((acc, [symbol, details]) => {
     const stock = stocks.find(s => s.symbol === symbol);
-    return acc + (details.quantity * (stock?.price || 0));
+    // Explicit type assertion to avoid 'unknown' type error
+    const qty = (details as { quantity: number }).quantity;
+    return acc + (qty * (stock?.price || 0));
   }, 0);
 
   const totalNetWorth = user.balance + portfolioValue;

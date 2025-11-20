@@ -67,40 +67,58 @@ const INITIAL_STOCK_SYMBOLS = [
   { symbol: 'BAJAJHLDNG', name: 'Bajaj Holdings', price: 7200.00, sector: 'Finance' },
 ];
 
-// Generate Initial Stocks with OHLC History
+// Generate Initial Stocks with extensive OHLC History
+// We generate ~500 points initially (approx 16 mins of 2s ticks)
+// To support 1H completely immediately we would need 1800 points, but 500 is good for startup perf
 const generateInitialStocks = (): Stock[] => {
+  const now = new Date();
+  const HISTORY_POINTS = 500; // 500 ticks * 2s = 1000s of history (~16 mins)
+
   return INITIAL_STOCK_SYMBOLS.map(s => {
     const history: StockDataPoint[] = [];
-    let price = s.price * 0.95; // Start slightly lower
+    let price = s.price; // End price is current price
     
-    for (let i = 0; i < 30; i++) {
-      const volatility = 0.005;
-      const change = (Math.random() * volatility * 2) - volatility;
-      const close = price * (1 + change);
-      const open = price;
-      const high = Math.max(open, close) + (Math.random() * price * 0.002);
-      const low = Math.min(open, close) - (Math.random() * price * 0.002);
+    // Generate backwards from Now
+    // We do this in reverse first to ensure current price matches the defined price
+    // But array needs to be chronological
+    
+    // Temporary array
+    const tempPoints = [];
+    let currentP = price;
+
+    for (let i = 0; i < HISTORY_POINTS; i++) {
+      const volatility = 0.002;
+      const changePercent = (Math.random() * volatility * 2) - volatility;
       
-      history.push({
-        time: `10:${30 + i}`,
-        price: close, // for line chart compatibility
-        open,
-        high,
-        low,
-        close
+      // Reverse logic: previous price was P / (1+change) roughly
+      const prevP = currentP / (1 + changePercent);
+      
+      const open = prevP;
+      const close = currentP;
+      // High/Low logic
+      const high = Math.max(open, close) + (Math.random() * close * 0.001);
+      const low = Math.min(open, close) - (Math.random() * close * 0.001);
+
+      const time = new Date(now.getTime() - (i * 2000)); // Go back 2s each step
+
+      tempPoints.unshift({
+        time: time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        price: close,
+        open, high, low, close
       });
-      price = close;
+
+      currentP = prevP;
     }
     
-    const currentPrice = history[history.length-1].close;
-    const startPrice = history[0].close;
+    const startPrice = tempPoints[0].close;
+    const endPrice = tempPoints[tempPoints.length - 1].close;
 
     return {
       ...s,
-      price: currentPrice,
-      change: ((currentPrice - startPrice) / startPrice) * 100,
-      changeAmount: currentPrice - startPrice,
-      history
+      price: endPrice,
+      change: ((endPrice - startPrice) / startPrice) * 100,
+      changeAmount: endPrice - startPrice,
+      history: tempPoints
     };
   });
 };
@@ -118,7 +136,7 @@ const App: React.FC = () => {
   const [currentView, setCurrentView] = useState<View>(View.DASHBOARD);
   const [supportTickets, setSupportTickets] = useState<SupportTicket[]>([]);
   const [systemLogs, setSystemLogs] = useState<SystemLog[]>([]);
-  const [theme, setTheme] = useState<string>(() => localStorage.getItem('theme') || 'dark');
+  const [theme, setTheme] = useState<string>(() => localStorage.getItem('theme') || 'light');
 
   // ... Theme & Time Effects ...
   useEffect(() => {
@@ -135,19 +153,19 @@ const App: React.FC = () => {
   useEffect(() => {
     const interval = setInterval(() => {
       // Only run simulation if market is OPEN or Override is TRUE
-      // This visual indicator logic is handled by the clock effect, but this check ensures simulation loop correctness
       if (!isMarketOpen && !isMarketOverride) return;
 
       setStocks(prevStocks => prevStocks.map(stock => {
         // 1. Simulate new price tick (OHLC)
-        const volatility = 0.0015; 
+        const volatility = 0.002; // Increased volatility for 2s interval to show better candles
         const changePercent = (Math.random() * volatility * 2) - volatility;
         const prevClose = stock.price;
         const newClose = Math.max(0.01, prevClose * (1 + changePercent));
         
         const open = prevClose;
-        const high = Math.max(open, newClose) + (Math.random() * prevClose * 0.0005);
-        const low = Math.min(open, newClose) - (Math.random() * prevClose * 0.0005);
+        // Ensure High/Low encapsulate Open/Close with slight wicks
+        const high = Math.max(open, newClose) + (Math.random() * prevClose * 0.001);
+        const low = Math.min(open, newClose) - (Math.random() * prevClose * 0.001);
 
         const newPoint: StockDataPoint = {
            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
@@ -155,8 +173,8 @@ const App: React.FC = () => {
            open, high, low, close: newClose
         };
 
-        // Limit history to last 50 points for performant "running" chart
-        const prevHistory = stock.history.length > 50 ? stock.history.slice(1) : stock.history;
+        // Keep up to 2000 points (approx 1 hour of history)
+        const prevHistory = stock.history.length > 2000 ? stock.history.slice(1) : stock.history;
         
         return {
           ...stock,
@@ -230,7 +248,7 @@ const App: React.FC = () => {
         }
       }
 
-    }, 1000); // Update every 1000ms (1 second) for fluid chart movement
+    }, 2000); // Update every 2000ms (2 seconds) for better candle visibility
 
     return () => clearInterval(interval);
   }, [isMarketOpen, isMarketOverride, user, stocks]);
@@ -265,7 +283,6 @@ const App: React.FC = () => {
   const handleSyncMarket = async () => {
     setIsSyncing(true);
     
-    // Process in chunks of 15 to avoid overwhelming the model/prompt limit and ensure ALL stocks are updated
     const chunkSize = 15;
     const allUpdates: {symbol: string, price: number}[] = [];
     const allSources: any[] = [];
@@ -281,19 +298,16 @@ const App: React.FC = () => {
         }
     }
 
-    // Update global sources if any found
     if (allSources.length) setDataSources(allSources.slice(0, 5)); 
     
     setStocks(prev => prev.map(s => {
        const real = allUpdates.find(p => p.symbol === s.symbol);
        if (real) {
           const newPoint = { 
-             // Ensure time format is consistent with simulation logic (HH:MM:SS)
              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }), 
              price: real.price, 
              open: real.price, high: real.price, low: real.price, close: real.price 
           };
-          // Append to history instead of replacing to keep the chart continuity
           return { 
              ...s, 
              price: real.price, 
@@ -369,7 +383,6 @@ const App: React.FC = () => {
         symbol, type: 'SELL', quantity: qty, price: stock.price, timestamp: new Date().toISOString(), totalValue: revenue, profitLoss
       };
 
-      // Remove associated orders if position is closed (Simplified: remove all for symbol if fully closed)
       let newOrders = user.activeOrders;
       if (newQty === 0) {
         newOrders = user.activeOrders.filter(o => o.symbol !== symbol);
@@ -395,32 +408,26 @@ const App: React.FC = () => {
     setUser(updatedUser);
   };
 
-  // Toggle Override Logic
   const handleToggleMarketOverride = () => {
     setIsMarketOverride(prev => {
       const newState = !prev;
-      // Immediate UI update logic
       const now = new Date();
       const h = now.getHours();
-      // Force update isMarketOpen based on the NEW override state instantly
       setIsMarketOpen((h >= 9 && h < 15) || newState);
       return newState;
     });
   };
 
-  // Clock
   useEffect(() => {
     const t = setInterval(() => {
        const now = new Date();
        setCurrentTime(now);
        const h = now.getHours();
-       // Standard logic: Market is open if 9-15 OR Override is on.
        setIsMarketOpen((h >= 9 && h < 15) || isMarketOverride);
     }, 1000);
     return () => clearInterval(t);
   }, [isMarketOverride]);
 
-  // ... Render ...
   if (!user) return <Auth onLogin={handleLogin} />;
 
   return (
@@ -457,9 +464,10 @@ const App: React.FC = () => {
                 await DBService.saveUser(updated);
               }
             }}
+            theme={theme}
           />
         )}
-        {currentView === View.ANALYTICS && <Analytics user={user} stocks={stocks} />}
+        {currentView === View.ANALYTICS && <Analytics user={user} stocks={stocks} theme={theme} />}
         {currentView === View.ADVISOR && <Advisor user={user} stocks={stocks} />}
         {currentView === View.NEWS && <NewsFeed stocks={stocks} />}
         {currentView === View.ADMIN_PANEL && user.role === 'ADMIN' && <AdminPanel allUsers={allUsers} stocks={stocks} onUpdateUserStatus={async()=>{}} onDeleteUser={async()=>{}} onUpdateStockPrice={()=>{}} isMarketOverride={isMarketOverride} onToggleMarketOverride={handleToggleMarketOverride} supportTickets={[]} onResolveTicket={()=>{}} systemLogs={[]} />}

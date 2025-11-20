@@ -1,22 +1,19 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Stock, User, Prediction, Order } from '../types';
 import { Card, Button, Badge, Input } from './UI';
 import StockChart from './StockChart';
 import { predictStockPrice } from '../services/geminiService';
 import { 
   SparklesIcon, 
-  BanknotesIcon,
-  BriefcaseIcon,
   ArrowPathIcon,
   ClockIcon,
   MagnifyingGlassIcon,
   XCircleIcon,
-  ShieldCheckIcon,
   ChartBarIcon,
   ArrowTrendingUpIcon,
   ArrowTrendingDownIcon,
-  StarIcon,
-  BellAlertIcon
+  StarIcon
 } from '@heroicons/react/24/solid';
 import { StarIcon as StarIconOutline } from '@heroicons/react/24/outline';
 
@@ -33,7 +30,77 @@ interface DashboardProps {
   isAutoSync: boolean;
   onToggleAutoSync: () => void;
   onToggleWishlist: (symbol: string) => void;
+  theme: string;
 }
+
+// Internal component to handle individual stock price flashing
+const StockListItem: React.FC<{
+  stock: Stock;
+  isSelected: boolean;
+  isWishlisted: boolean;
+  onSelect: (stock: Stock) => void;
+  onToggleWishlist: (symbol: string) => void;
+}> = ({ stock, isSelected, isWishlisted, onSelect, onToggleWishlist }) => {
+  const [flashState, setFlashState] = useState<'up' | 'down' | null>(null);
+  const prevPriceRef = useRef(stock.price);
+
+  useEffect(() => {
+    if (stock.price > prevPriceRef.current) {
+      setFlashState('up');
+    } else if (stock.price < prevPriceRef.current) {
+      setFlashState('down');
+    }
+    
+    prevPriceRef.current = stock.price;
+
+    const timer = setTimeout(() => {
+      setFlashState(null);
+    }, 1000); // Flash duration
+
+    return () => clearTimeout(timer);
+  }, [stock.price]);
+
+  // Dynamic background based on flash state or selection
+  let bgClass = "bg-white dark:bg-slate-900"; // Default
+  if (flashState === 'up') bgClass = "bg-emerald-100 dark:bg-emerald-900/40 transition-colors duration-500";
+  else if (flashState === 'down') bgClass = "bg-red-100 dark:bg-red-900/40 transition-colors duration-500";
+  else if (isSelected) bgClass = "bg-slate-100 dark:bg-slate-800";
+  else bgClass = "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors";
+
+  const borderClass = isSelected ? "border-l-accent shadow-md" : "border-l-transparent";
+
+  return (
+    <Card 
+      className={`cursor-pointer border-l-4 p-3 ${bgClass} ${borderClass}`}
+    >
+      <div className="flex items-start gap-3">
+        <div 
+           onClick={(e) => {
+             e.stopPropagation();
+             onToggleWishlist(stock.symbol);
+           }}
+           className="mt-0.5 text-slate-400 hover:text-yellow-400 transition-colors"
+        >
+           {isWishlisted ? <StarIcon className="h-5 w-5 text-yellow-400" /> : <StarIconOutline className="h-5 w-5" />}
+        </div>
+        <div className="flex-1" onClick={() => onSelect(stock)}>
+          <div className="flex justify-between items-center mb-1">
+            <span className="font-bold text-slate-900 dark:text-white text-sm">{stock.symbol}</span>
+            <Badge type={stock.change >= 0 ? 'success' : 'danger'}>
+              {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
+            </Badge>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-slate-500 dark:text-slate-400 truncate w-20">{stock.name}</span>
+            <span className={`text-sm font-mono font-medium ${flashState === 'up' ? 'text-emerald-600 dark:text-emerald-400 scale-110' : flashState === 'down' ? 'text-red-600 dark:text-red-400 scale-110' : 'text-slate-900 dark:text-white'} transition-all duration-300`}>
+              ₹{stock.price.toFixed(2)}
+            </span>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
 
 export const Dashboard: React.FC<DashboardProps> = ({ 
   user, 
@@ -47,7 +114,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   isMarketOpen,
   isAutoSync,
   onToggleAutoSync,
-  onToggleWishlist
+  onToggleWishlist,
+  theme
 }) => {
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [tradeQty, setTradeQty] = useState<number>(1);
@@ -71,6 +139,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
       if (updated) setSelectedStock(updated);
     }
   }, [stocks, selectedStock]);
+
+  // Automatic Sync Effect (Every 10 Seconds)
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+        // Trigger sync to fetch real-time data
+        if (!isSyncing) {
+           onSync();
+        }
+    }, 10000); // 10000ms = 10 seconds
+
+    return () => clearInterval(intervalId);
+  }, [onSync, isSyncing]);
 
   // Filter stocks
   const filteredStocks = useMemo(() => {
@@ -125,27 +205,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
       {/* Left Column: Market List */}
       <div className="lg:col-span-3 flex flex-col h-[calc(100vh-100px)]">
-        {/* Market Controls ... (Same as before) */}
+        {/* Market Controls */}
         <div className="flex flex-col gap-3 mb-4 flex-shrink-0">
           <div className="flex items-center justify-between">
               <h2 className="text-xl font-bold text-slate-900 dark:text-white">Live Market</h2>
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2 px-2 py-1 bg-slate-200 dark:bg-slate-800 rounded-lg border border-slate-300 dark:border-slate-700">
-                  <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase">Auto-Sync</span>
-                  <button 
-                    onClick={onToggleAutoSync}
-                    className={`w-8 h-4 rounded-full relative transition-colors ${isAutoSync ? 'bg-emerald-500' : 'bg-slate-400 dark:bg-slate-600'}`}
-                  >
-                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full transition-transform ${isAutoSync ? 'left-4.5 translate-x-0.5' : 'left-0.5'}`} />
-                  </button>
-                </div>
                 <Button 
                   onClick={onSync} 
-                  disabled={isSyncing || isAutoSync}
+                  disabled={isSyncing}
                   className="px-2 py-1 text-xs flex items-center gap-1 bg-slate-200 hover:bg-slate-300 text-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 dark:text-slate-200"
                 >
                   <ArrowPathIcon className={`h-3 w-3 ${isSyncing ? 'animate-spin' : ''}`} />
-                  {isSyncing ? '...' : 'Sync'}
+                  {isSyncing ? 'Syncing...' : 'Sync'}
                 </Button>
               </div>
           </div>
@@ -186,34 +257,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="flex-1 overflow-y-auto pr-1 space-y-2 pb-4">
           {filteredStocks.map(stock => (
-              <Card 
-                key={stock.symbol} 
-                className={`cursor-pointer transition-all border-l-4 p-3 hover:bg-slate-100 dark:hover:bg-slate-800/80 ${selectedStock?.symbol === stock.symbol ? 'border-l-accent bg-slate-100 dark:bg-slate-800 shadow-md' : 'border-l-transparent'}`}
-              >
-                <div className="flex items-start gap-3">
-                  <div 
-                     onClick={(e) => {
-                       e.stopPropagation();
-                       onToggleWishlist(stock.symbol);
-                     }}
-                     className="mt-0.5 text-slate-400 hover:text-yellow-400 transition-colors"
-                  >
-                     {wishlist.includes(stock.symbol) ? <StarIcon className="h-5 w-5 text-yellow-400" /> : <StarIconOutline className="h-5 w-5" />}
-                  </div>
-                  <div className="flex-1" onClick={() => { setSelectedStock(stock); setAiPrediction(null); }}>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="font-bold text-slate-900 dark:text-white text-sm">{stock.symbol}</span>
-                      <Badge type={stock.change >= 0 ? 'success' : 'danger'}>
-                        {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
-                      </Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs text-slate-500 dark:text-slate-400 truncate w-20">{stock.name}</span>
-                      <span className="text-sm font-mono text-slate-900 dark:text-white font-medium">₹{stock.price.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
+              <StockListItem 
+                key={stock.symbol}
+                stock={stock}
+                isSelected={selectedStock?.symbol === stock.symbol}
+                isWishlisted={wishlist.includes(stock.symbol)}
+                onSelect={(s) => { setSelectedStock(s); setAiPrediction(null); }}
+                onToggleWishlist={onToggleWishlist}
+              />
             ))}
         </div>
       </div>
@@ -260,12 +311,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <StockChart 
                   data={selectedStock.history} 
                   targetPrice={aiPrediction?.symbol === selectedStock.symbol ? aiPrediction.targetPrice : undefined}
+                  theme={theme}
                 />
               </div>
 
               {aiPrediction && aiPrediction.symbol === selectedStock.symbol && (
-                 // ... AI Prediction UI same as before ...
-                 <div className="mt-4 bg-white dark:bg-slate-900/80 backdrop-blur rounded-xl border border-slate-200 dark:border-slate-700/50 animate-fade-in relative overflow-hidden group shadow-lg">
+                 // ... AI Prediction UI ...
+                 <div className="mt-4 bg-slate-50 dark:bg-slate-900/80 backdrop-blur rounded-xl border border-slate-200 dark:border-slate-700/50 animate-fade-in relative overflow-hidden group shadow-lg">
                    <div className="p-5 relative z-10">
                       <div className="flex justify-between items-start mb-4">
                          <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-lg">
@@ -280,23 +332,23 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       </div>
                       
                       {/* Technical Indicators Grid */}
-                      <div className="grid grid-cols-3 gap-4 mb-4 bg-slate-50 dark:bg-slate-950/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/30">
+                      <div className="grid grid-cols-3 gap-4 mb-4 bg-white dark:bg-slate-950/50 p-3 rounded-lg border border-slate-200 dark:border-slate-700/30">
                         <div className="text-center">
                           <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">RSI (14)</div>
-                          <div className={`font-mono font-bold ${aiPrediction.technicalIndicators.rsi > 70 ? 'text-red-400' : aiPrediction.technicalIndicators.rsi < 30 ? 'text-emerald-400' : 'text-slate-300'}`}>
+                          <div className={`font-mono font-bold ${aiPrediction.technicalIndicators.rsi > 70 ? 'text-red-500 dark:text-red-400' : aiPrediction.technicalIndicators.rsi < 30 ? 'text-emerald-500 dark:text-emerald-400' : 'text-slate-700 dark:text-slate-300'}`}>
                             {aiPrediction.technicalIndicators.rsi}
                           </div>
                         </div>
-                        <div className="text-center border-l border-slate-700/50">
+                        <div className="text-center border-l border-slate-200 dark:border-slate-700/50">
                           <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">MACD</div>
-                          <div className={`font-bold text-xs ${aiPrediction.technicalIndicators.macd === 'Bullish' ? 'text-emerald-400' : aiPrediction.technicalIndicators.macd === 'Bearish' ? 'text-red-400' : 'text-yellow-400'}`}>
+                          <div className={`font-bold text-xs ${aiPrediction.technicalIndicators.macd === 'Bullish' ? 'text-emerald-500 dark:text-emerald-400' : aiPrediction.technicalIndicators.macd === 'Bearish' ? 'text-red-500 dark:text-red-400' : 'text-yellow-500 dark:text-yellow-400'}`}>
                             {aiPrediction.technicalIndicators.macd}
                           </div>
                         </div>
-                        <div className="text-center border-l border-slate-700/50">
+                        <div className="text-center border-l border-slate-200 dark:border-slate-700/50">
                           <div className="text-[10px] uppercase text-slate-500 font-bold mb-1">Trend</div>
-                          <div className="font-bold text-xs flex items-center justify-center gap-1 text-white">
-                            {aiPrediction.technicalIndicators.trend === 'Up' ? <ArrowTrendingUpIcon className="h-3 w-3 text-emerald-400" /> : aiPrediction.technicalIndicators.trend === 'Down' ? <ArrowTrendingDownIcon className="h-3 w-3 text-red-400" /> : <span>→</span>}
+                          <div className="font-bold text-xs flex items-center justify-center gap-1 text-slate-900 dark:text-white">
+                            {aiPrediction.technicalIndicators.trend === 'Up' ? <ArrowTrendingUpIcon className="h-3 w-3 text-emerald-500 dark:text-emerald-400" /> : aiPrediction.technicalIndicators.trend === 'Down' ? <ArrowTrendingDownIcon className="h-3 w-3 text-red-500 dark:text-red-400" /> : <span>→</span>}
                             {aiPrediction.technicalIndicators.trend}
                           </div>
                         </div>
@@ -305,14 +357,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {/* Sentiment Gauge */}
                       <div className="mb-4">
                         <div className="flex justify-between text-xs mb-1">
-                           <span className="text-red-400 font-bold">Fear</span>
-                           <span className="text-slate-400">Sentiment: {aiPrediction.sentimentScore}/100</span>
-                           <span className="text-emerald-400 font-bold">Greed</span>
+                           <span className="text-red-500 dark:text-red-400 font-bold">Fear</span>
+                           <span className="text-slate-500 dark:text-slate-400">Sentiment: {aiPrediction.sentimentScore}/100</span>
+                           <span className="text-emerald-500 dark:text-emerald-400 font-bold">Greed</span>
                         </div>
-                        <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                        <div className="h-2 bg-slate-200 dark:bg-slate-800 rounded-full overflow-hidden relative">
                            <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-yellow-500 to-emerald-500 opacity-30" />
                            <div 
-                             className="h-full w-2 bg-white rounded-full absolute top-0 transition-all duration-1000 shadow-[0_0_10px_rgba(255,255,255,0.5)]"
+                             className="h-full w-2 bg-slate-900 dark:bg-white rounded-full absolute top-0 transition-all duration-1000 shadow-[0_0_10px_rgba(0,0,0,0.2)]"
                              style={{ left: `${aiPrediction.sentimentScore}%` }}
                            />
                         </div>
@@ -323,12 +375,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                       {/* Key Levels */}
                       <div className="flex gap-4 text-xs">
                          <div className="flex-1 p-2 rounded bg-red-500/10 border border-red-500/20">
-                            <span className="block text-red-400 font-bold mb-1">Resistance</span>
-                            <div className="font-mono text-slate-300">{aiPrediction.resistanceLevels.map(l => `₹${l}`).join(', ')}</div>
+                            <span className="block text-red-600 dark:text-red-400 font-bold mb-1">Resistance</span>
+                            <div className="font-mono text-slate-700 dark:text-slate-300">{aiPrediction.resistanceLevels.map(l => `₹${l}`).join(', ')}</div>
                          </div>
                          <div className="flex-1 p-2 rounded bg-emerald-500/10 border border-emerald-500/20">
-                            <span className="block text-emerald-400 font-bold mb-1">Support</span>
-                            <div className="font-mono text-slate-300">{aiPrediction.supportLevels.map(l => `₹${l}`).join(', ')}</div>
+                            <span className="block text-emerald-600 dark:text-emerald-400 font-bold mb-1">Support</span>
+                            <div className="font-mono text-slate-700 dark:text-slate-300">{aiPrediction.supportLevels.map(l => `₹${l}`).join(', ')}</div>
                          </div>
                       </div>
                    </div>
@@ -416,12 +468,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
       {/* Right Column: Portfolio & Orders */}
       <div className="lg:col-span-3 flex flex-col gap-4 h-[calc(100vh-100px)] overflow-y-auto">
-        <Card className="bg-gradient-to-br from-slate-100 to-white dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700">
+        <Card className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 border-slate-200 dark:border-slate-700">
           <h2 className="text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider mb-1 font-bold">Total Net Worth</h2>
           <div className="text-2xl lg:text-3xl font-bold text-slate-900 dark:text-white font-mono mb-4 truncate">
             {formatINR(totalNetWorth)}
           </div>
-          <div className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700/50">
+          <div className="flex justify-between items-center p-3 bg-white dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700/50">
                 <div className="flex items-center gap-1.5">
                    <ChartBarIcon className="h-4 w-4 text-slate-400" />
                    <span className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase">Total P/L</span>
@@ -443,16 +495,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
                <Card key={order.id} className="p-3 border-l-4 border-l-yellow-500 flex justify-between items-center">
                   <div>
                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-white">{order.symbol}</span>
+                        <span className="font-bold text-sm text-slate-900 dark:text-white">{order.symbol}</span>
                         <span className="text-[10px] bg-slate-700 text-white px-1 rounded">{order.type === 'STOP_LOSS' ? 'SL' : 'TP'}</span>
                      </div>
-                     <div className="text-xs text-slate-400 mt-1">
-                        Trigger @ <span className="font-mono text-white">₹{order.triggerPrice}</span>
+                     <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Trigger @ <span className="font-mono text-slate-700 dark:text-white">₹{order.triggerPrice}</span>
                      </div>
                   </div>
                   <button 
                     onClick={() => onCancelOrder(order.id)}
-                    className="text-slate-500 hover:text-red-400 transition-colors"
+                    className="text-slate-400 hover:text-red-500 transition-colors"
                     title="Cancel Order"
                   >
                     <XCircleIcon className="h-5 w-5" />

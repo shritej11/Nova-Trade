@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { User, ChatMessage } from '../types';
 import { Card, Button, Input } from './UI';
@@ -111,8 +110,8 @@ export const CommunityChat: React.FC<CommunityChatProps> = ({ user }) => {
     <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
       {/* Chat Window */}
       {isOpen && (
-        <div className="mb-4 w-80 md:w-96 h-[500px] flex flex-col animate-fade-in origin-bottom-right shadow-2xl shadow-slate-900/50 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
-          <div className="bg-slate-100 dark:bg-slate-900/95 backdrop-blur-md flex-1 flex flex-col">
+        <div className="mb-4 w-80 md:w-96 h-[500px] flex flex-col animate-fade-in origin-bottom-right shadow-2xl shadow-slate-500/20 dark:shadow-slate-900/50 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-slate-900/95 backdrop-blur-md flex-1 flex flex-col">
             
             {/* Header */}
             <div className="p-4 bg-accent text-white flex justify-between items-center shadow-md z-10">
@@ -142,7 +141,7 @@ export const CommunityChat: React.FC<CommunityChatProps> = ({ user }) => {
                 <div key={msg.id} className={`flex flex-col ${msg.isUser ? 'items-end' : 'items-start'}`}>
                   <div className="flex items-center gap-1 mb-1 px-1">
                     {!msg.isUser && (
-                       <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-slate-400 to-slate-600 flex items-center justify-center text-[8px] text-white font-bold">
+                       <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-slate-300 to-slate-500 dark:from-slate-400 dark:to-slate-600 flex items-center justify-center text-[8px] text-white font-bold">
                           {msg.sender[0]}
                        </div>
                     )}

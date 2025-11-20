@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Button, Input, Card } from './UI';
 import { ShieldCheckIcon, UserIcon, InboxArrowDownIcon, Cog6ToothIcon, XMarkIcon, PaperAirplaneIcon, QuestionMarkCircleIcon, BeakerIcon } from '@heroicons/react/24/solid';
@@ -213,15 +212,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-950 relative overflow-hidden">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950 relative overflow-hidden transition-colors">
       {/* Decorative blobs */}
-      <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent/20 rounded-full blur-[128px]" />
+      <div className="absolute top-0 left-1/4 w-96 h-96 bg-accent/10 rounded-full blur-[128px]" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-500/10 rounded-full blur-[128px]" />
 
       <div className="absolute top-4 right-4 z-20">
         <button 
           onClick={() => setShowConfig(true)}
-          className="bg-slate-800/50 p-2 rounded-full text-slate-400 hover:text-white hover:bg-slate-700 transition-all border border-slate-700"
+          className="bg-white dark:bg-slate-800/50 p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-slate-200 dark:border-slate-700 shadow-sm"
           title="Configure Real Email"
         >
           <Cog6ToothIcon className="h-5 w-5" />
@@ -230,26 +229,26 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
 
       {/* Config Modal */}
       {showConfig && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
            <Card className="w-full max-w-md border-accent shadow-2xl shadow-accent/20 max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
                   <PaperAirplaneIcon className="h-5 w-5 text-accent" /> Email Service Setup
                 </h3>
-                <button onClick={() => setShowConfig(false)} className="text-slate-400 hover:text-white">
+                <button onClick={() => setShowConfig(false)} className="text-slate-400 hover:text-slate-700 dark:hover:text-white">
                   <XMarkIcon className="h-5 w-5" />
                 </button>
               </div>
               
-              <div className="bg-slate-900 p-3 rounded mb-4 border border-slate-700">
-                <h4 className="text-xs font-bold text-white mb-2 flex items-center gap-1">
-                  <QuestionMarkCircleIcon className="h-4 w-4 text-yellow-400" /> No Code in Email?
+              <div className="bg-slate-100 dark:bg-slate-900 p-3 rounded mb-4 border border-slate-200 dark:border-slate-700">
+                <h4 className="text-xs font-bold text-slate-700 dark:text-white mb-2 flex items-center gap-1">
+                  <QuestionMarkCircleIcon className="h-4 w-4 text-yellow-500" /> No Code in Email?
                 </h4>
-                <ul className="text-[10px] text-slate-400 list-disc list-inside space-y-1">
+                <ul className="text-[10px] text-slate-500 dark:text-slate-400 list-disc list-inside space-y-1">
                    <li>Go to <a href="https://dashboard.emailjs.com/admin/templates" target="_blank" className="text-accent underline">EmailJS Templates</a> and edit your template.</li>
-                   <li><strong>Supported Variables:</strong> <span className="font-mono text-emerald-400 bg-slate-950 px-1 rounded">{'{{passcode}}'}</span>, <span className="font-mono text-emerald-400 bg-slate-950 px-1 rounded">{'{{otp}}'}</span>, <span className="font-mono text-emerald-400 bg-slate-950 px-1 rounded">{'{{time}}'}</span></li>
+                   <li><strong>Supported Variables:</strong> <span className="font-mono text-emerald-600 dark:text-emerald-400 bg-slate-200 dark:bg-slate-950 px-1 rounded">{'{{passcode}}'}</span>, <span className="font-mono text-emerald-600 dark:text-emerald-400 bg-slate-200 dark:bg-slate-950 px-1 rounded">{'{{otp}}'}</span>, <span className="font-mono text-emerald-600 dark:text-emerald-400 bg-slate-200 dark:bg-slate-950 px-1 rounded">{'{{time}}'}</span></li>
                    <li>Example Body: "Your code is {'{{passcode}}'} sent at {'{{time}}'}".</li>
-                   <li>Also ensure "To Email" field has <span className="font-mono text-emerald-400 bg-slate-950 px-1 rounded">{'{{to_email}}'}</span>.</li>
+                   <li>Also ensure "To Email" field has <span className="font-mono text-emerald-600 dark:text-emerald-400 bg-slate-200 dark:bg-slate-950 px-1 rounded">{'{{to_email}}'}</span>.</li>
                 </ul>
               </div>
 
@@ -279,8 +278,8 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   />
                 </div>
 
-                <div className="border-t border-slate-700 pt-4 mt-4">
-                    <h4 className="text-xs font-bold text-white mb-2 flex items-center gap-1">
+                <div className="border-t border-slate-200 dark:border-slate-700 pt-4 mt-4">
+                    <h4 className="text-xs font-bold text-slate-700 dark:text-white mb-2 flex items-center gap-1">
                       <BeakerIcon className="h-3 w-3 text-purple-400" /> Test Configuration
                     </h4>
                     <div className="flex gap-2">
@@ -300,7 +299,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                        </Button>
                     </div>
                     {testStatus && (
-                       <div className={`mt-2 text-xs p-2 rounded ${testStatus.type === 'success' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-400 border border-red-500/30'}`}>
+                       <div className={`mt-2 text-xs p-2 rounded ${testStatus.type === 'success' ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-600 dark:text-red-400 border border-red-500/30'}`}>
                           {testStatus.msg}
                        </div>
                     )}
@@ -312,27 +311,27 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         </div>
       )}
 
-      <Card className="w-full max-w-md relative z-10 border-slate-800 max-h-[90vh] overflow-y-auto scrollbar-hide">
+      <Card className="w-full max-w-md relative z-10 border-slate-200 dark:border-slate-800 max-h-[90vh] overflow-y-auto scrollbar-hide">
         <div className="flex justify-center gap-4 mb-6">
            <button 
              onClick={() => { setIsAdminMode(false); setIsLogin(true); setIsOtpSent(false); setError(''); setSimulationMessage(null); }}
-             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${!isAdminMode ? 'bg-accent text-white shadow-lg shadow-blue-500/25' : 'text-slate-500 hover:bg-slate-800'}`}
+             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${!isAdminMode ? 'bg-accent text-white shadow-lg shadow-blue-500/25' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
            >
              <UserIcon className="h-4 w-4" /> Trader
            </button>
            <button 
              onClick={() => { setIsAdminMode(true); setIsLogin(true); setIsOtpSent(false); setError(''); setSimulationMessage(null); }}
-             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${isAdminMode ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25' : 'text-slate-500 hover:bg-slate-800'}`}
+             className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all ${isAdminMode ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/25' : 'text-slate-500 hover:bg-slate-200 dark:hover:bg-slate-800'}`}
            >
              <ShieldCheckIcon className="h-4 w-4" /> Admin
            </button>
         </div>
 
         <div className="text-center mb-8">
-          <h1 className={`text-3xl font-bold bg-clip-text text-transparent ${isAdminMode ? 'bg-gradient-to-r from-purple-400 to-pink-400' : 'bg-gradient-to-r from-blue-400 to-emerald-400'}`}>
+          <h1 className={`text-3xl font-bold bg-clip-text text-transparent ${isAdminMode ? 'bg-gradient-to-r from-purple-600 to-pink-500' : 'bg-gradient-to-r from-blue-500 to-emerald-500'}`}>
             {isAdminMode ? 'Nova Admin' : 'NovaTrade AI'}
           </h1>
-          <p className="text-slate-400 mt-2">
+          <p className="text-slate-500 dark:text-slate-400 mt-2">
             {isAdminMode ? 'System Management Console' : (isLogin ? 'Welcome back, trader.' : 'Create your secure account.')}
           </p>
         </div>
@@ -341,7 +340,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         {isLogin && (
           <form onSubmit={handleLoginSubmit} className="space-y-4 animate-fade-in">
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Username</label>
+              <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Username</label>
               <Input 
                 type="text" 
                 value={username}
@@ -350,7 +349,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-400 mb-1">Password</label>
+              <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Password</label>
               <Input 
                 type="password" 
                 value={password}
@@ -359,7 +358,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
               />
             </div>
             
-            {error && <p className="text-red-400 text-sm text-center animate-shake">{error}</p>}
+            {error && <p className="text-red-500 dark:text-red-400 text-sm text-center animate-shake">{error}</p>}
 
             <Button 
               type="submit" 
@@ -376,15 +375,15 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
              <div className="mb-2 flex justify-center">
                 <div className="flex items-center gap-2 text-xs font-bold text-slate-500 uppercase tracking-widest">
                    <span className={!isOtpSent ? "text-accent" : ""}>Step 1: Details</span>
-                   <span className="text-slate-700">→</span>
-                   <span className={isOtpSent ? "text-emerald-400" : ""}>Step 2: Verify</span>
+                   <span className="text-slate-400 dark:text-slate-700">→</span>
+                   <span className={isOtpSent ? "text-emerald-500" : ""}>Step 2: Verify</span>
                 </div>
              </div>
 
              {!isOtpSent ? (
                <>
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Username</label>
+                    <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Username</label>
                     <Input 
                       type="text" 
                       value={username}
@@ -394,7 +393,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Email Address</label>
+                    <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Email Address</label>
                     <Input 
                       type="email" 
                       value={email}
@@ -404,7 +403,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-400 mb-1">Password</label>
+                    <label className="block text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Password</label>
                     <Input 
                       type="password" 
                       value={password}
@@ -419,19 +418,19 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                   {/* Simulation Notification */}
                   {simulationMessage && (
                     <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-3 animate-fade-in">
-                      <div className="flex items-center gap-2 text-blue-400 text-xs font-bold uppercase mb-1">
+                      <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-xs font-bold uppercase mb-1">
                         <InboxArrowDownIcon className="h-4 w-4" /> Simulated Email Inbox
                       </div>
-                      <pre className="whitespace-pre-wrap font-mono text-xs text-blue-200 bg-slate-950/50 p-2 rounded border border-blue-500/10">
+                      <pre className="whitespace-pre-wrap font-mono text-xs text-blue-800 dark:text-blue-200 bg-slate-100 dark:bg-slate-950/50 p-2 rounded border border-blue-500/10">
                         {simulationMessage}
                       </pre>
                     </div>
                   )}
 
                   <div className="text-center">
-                    <p className="text-sm text-slate-300 mb-2">
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mb-2">
                       {emailConfig.serviceId ? 'Code sent via Nova Trade AI to ' : 'Simulating sending to '}
-                      <span className="text-white font-bold">{email}</span>
+                      <span className="text-slate-900 dark:text-white font-bold">{email}</span>
                     </p>
                     <Input 
                       type="text" 
@@ -455,7 +454,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
                </div>
              )}
 
-             {error && <p className="text-red-400 text-sm text-center animate-shake">{error}</p>}
+             {error && <p className="text-red-500 dark:text-red-400 text-sm text-center animate-shake">{error}</p>}
 
              <Button 
                 type="submit" 
@@ -471,7 +470,7 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
           <div className="mt-6 text-center">
             <button 
               onClick={() => { setIsLogin(!isLogin); setError(''); setIsOtpSent(false); setSimulationMessage(null); }}
-              className="text-sm text-slate-400 hover:text-white transition-colors"
+              className="text-sm text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white transition-colors"
             >
               {isLogin ? "Don't have an account? Sign up" : "Already have an account? Log in"}
             </button>

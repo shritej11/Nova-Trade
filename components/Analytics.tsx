@@ -21,13 +21,21 @@ import {
 interface AnalyticsProps {
   user: User;
   stocks: Stock[];
+  theme?: string;
 }
 
 const COLORS = ['#3b82f6', '#10b981', '#eab308', '#ef4444', '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'];
 
-export const Analytics: React.FC<AnalyticsProps> = ({ user, stocks }) => {
+export const Analytics: React.FC<AnalyticsProps> = ({ user, stocks, theme = 'light' }) => {
   const [timeRange, setTimeRange] = useState<'ALL' | 'RECENT'>('ALL');
   const [selectedSector, setSelectedSector] = useState<string | null>(null);
+
+  const isDark = theme === 'dark';
+  const axisColor = isDark ? '#64748b' : '#94a3b8';
+  const gridColor = isDark ? '#475569' : '#e2e8f0';
+  const tooltipBg = isDark ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)';
+  const tooltipBorder = isDark ? '#334155' : '#cbd5e1';
+  const tooltipText = isDark ? '#f1f5f9' : '#0f172a';
 
   // --- 1. Sector Diversification Logic with Drill-Down ---
   const sectorData = useMemo(() => {
@@ -37,11 +45,13 @@ export const Analytics: React.FC<AnalyticsProps> = ({ user, stocks }) => {
     Object.entries(user.portfolio).forEach(([symbol, details]) => {
       const stock = stocks.find(s => s.symbol === symbol);
       if (stock) {
-        const value = stock.price * details.quantity;
+        // Explicitly type details to avoid TS 'unknown' error
+        const qty = (details as { quantity: number }).quantity;
+        const value = stock.price * qty;
         if (!sectors[stock.sector]) sectors[stock.sector] = { value: 0, stocks: [] };
         
         sectors[stock.sector].value += value;
-        sectors[stock.sector].stocks.push({ symbol, qty: details.quantity, val: value });
+        sectors[stock.sector].stocks.push({ symbol, qty: qty, val: value });
         totalValue += value;
       }
     });
@@ -203,12 +213,13 @@ export const Analytics: React.FC<AnalyticsProps> = ({ user, stocks }) => {
                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
                      </linearGradient>
                    </defs>
-                   <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                   <XAxis dataKey="index" tick={{fill: '#94a3b8', fontSize: 10}} tickFormatter={(val) => `#${val}`} />
-                   <YAxis stroke="#64748b" fontSize={10} tickFormatter={(val) => `₹${val}`} />
+                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={gridColor} strokeOpacity={0.5} />
+                   <XAxis dataKey="index" tick={{fill: axisColor, fontSize: 10}} tickFormatter={(val) => `#${val}`} />
+                   <YAxis stroke={axisColor} fontSize={10} tickFormatter={(val) => `₹${val}`} />
                    <RechartsTooltip 
-                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: '#334155', color: 'white', borderRadius: '8px', fontSize: '12px' }}
-                     labelStyle={{ color: '#94a3b8', marginBottom: '5px' }}
+                     contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText, borderRadius: '8px', fontSize: '12px' }}
+                     labelStyle={{ color: axisColor, marginBottom: '5px' }}
+                     itemStyle={{ color: tooltipText }}
                      formatter={(value: number) => [`₹${value.toFixed(2)}`, 'Cumulative P/L']}
                      labelFormatter={(label, payload) => {
                         if (payload && payload.length > 0) return `${payload[0].payload.fullDate}`;
@@ -266,7 +277,8 @@ export const Analytics: React.FC<AnalyticsProps> = ({ user, stocks }) => {
                    </Pie>
                    <RechartsTooltip 
                      formatter={(value: number) => formatINR(value)}
-                     contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: '#334155', color: 'white', borderRadius: '8px' }}
+                     contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText, borderRadius: '8px' }}
+                     itemStyle={{ color: tooltipText }}
                    />
                    <Legend 
                       layout="horizontal" 
@@ -325,13 +337,14 @@ export const Analytics: React.FC<AnalyticsProps> = ({ user, stocks }) => {
             {scatterData.length > 0 ? (
                <ResponsiveContainer width="100%" height={250}>
                   <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 0 }}>
-                     <CartesianGrid strokeDasharray="3 3" strokeOpacity={0.1} />
-                     <XAxis type="number" dataKey="x" name="Trade Sequence" tick={{fontSize: 10}} label={{ value: 'Trade #', position: 'insideBottomRight', offset: -5, fontSize: 10 }} />
-                     <YAxis type="number" dataKey="y" name="P/L" tick={{fontSize: 10}} label={{ value: 'Profit/Loss (₹)', angle: -90, position: 'insideLeft', fontSize: 10 }} />
+                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} strokeOpacity={0.5} />
+                     <XAxis type="number" dataKey="x" name="Trade Sequence" tick={{fontSize: 10, fill: axisColor}} label={{ value: 'Trade #', position: 'insideBottomRight', offset: -5, fontSize: 10, fill: axisColor }} />
+                     <YAxis type="number" dataKey="y" name="P/L" tick={{fontSize: 10, fill: axisColor}} label={{ value: 'Profit/Loss (₹)', angle: -90, position: 'insideLeft', fontSize: 10, fill: axisColor }} />
                      <ZAxis type="number" dataKey="z" range={[50, 400]} name="Value" />
                      <RechartsTooltip 
                         cursor={{ strokeDasharray: '3 3' }} 
-                        contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: '#334155', color: 'white', borderRadius: '8px' }}
+                        contentStyle={{ backgroundColor: tooltipBg, borderColor: tooltipBorder, color: tooltipText, borderRadius: '8px' }}
+                        itemStyle={{ color: tooltipText }}
                         formatter={(value: any, name: any, props: any) => {
                            if (name === 'P/L') return `₹${Number(value).toFixed(2)}`;
                            if (name === 'Value') return `Val: ₹${Number(value).toFixed(0)}`;
@@ -339,7 +352,7 @@ export const Analytics: React.FC<AnalyticsProps> = ({ user, stocks }) => {
                         }}
                         labelFormatter={() => ''}
                      />
-                     <ReferenceLine y={0} stroke="#94a3b8" strokeWidth={1} />
+                     <ReferenceLine y={0} stroke={axisColor} strokeWidth={1} />
                      <Scatter name="Trades" data={scatterData} fill="#8884d8">
                         {scatterData.map((entry, index) => (
                            <Cell key={`cell-${index}`} fill={entry.isWin ? '#10b981' : '#ef4444'} />
